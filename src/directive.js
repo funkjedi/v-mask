@@ -3,21 +3,23 @@ import format from './format';
 import { trigger } from './utils';
 import { isAndroid, isChrome } from './utils/env';
 
+const defer = (typeof requestAnimationFrame !== 'undefined') ? requestAnimationFrame : setTimeout;
+
 /**
  * Event handler
  * @param {HTMLInputElement} el
- * @param {Boolean}          force
+ * @param {?String}          value
+ * @param {?Event}           event
  */
-function updateValue(el, force = false) {
-  const { value, dataset: { previousValue = '', mask } } = el;
+function updateValue(el, value, event) {
+  if (value === el.dataset.previousValue) {
+    return;
+  }
 
-  if (force || (value && value !== previousValue && value.length > previousValue.length)) {
-    el.value = format(value, mask);
-    if (isAndroid && isChrome) {
-      setTimeout(() => trigger(el, 'input'), 0);
-    } else {
-      trigger(el, 'input');
-    }
+  el.value = format(value, el.dataset.mask);
+
+  if (event) {
+    event.target.value = el.value;
   }
 
   el.dataset.previousValue = value;
@@ -48,7 +50,9 @@ export default {
    */
   bind(el, { value }) {
     updateMask(el, value);
-    updateValue(el);
+    updateValue(el, value);
+
+    el.addEventListener('input', event => updateValue(el, event.target.value, event));
   },
 
   /**
@@ -69,8 +73,5 @@ export default {
     if (isMaskChanged) {
       updateMask(el, value);
     }
-
-    // update value
-    updateValue(el, isMaskChanged);
   },
 };

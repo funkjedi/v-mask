@@ -62,36 +62,21 @@ function format (data, mask) {
   return text;
 }
 
-var trigger = function trigger(el, type) {
-  var e = document.createEvent('HTMLEvents');
-  e.initEvent(type, true, true);
-  el.dispatchEvent(e);
-};
-
 var inBrowser = typeof window !== 'undefined';
 var UA = inBrowser && window.navigator.userAgent.toLowerCase();
 var isEdge = UA && UA.indexOf('edge/') > 0;
 var isAndroid = UA && UA.indexOf('android') > 0;
 var isChrome = UA && /chrome\/\d+/.test(UA) && !isEdge;
 
-function updateValue(el) {
-  var force = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
-  var value = el.value,
-      _el$dataset = el.dataset,
-      _el$dataset$previousV = _el$dataset.previousValue,
-      previousValue = _el$dataset$previousV === undefined ? '' : _el$dataset$previousV,
-      mask = _el$dataset.mask;
+function updateValue(el, value, event) {
+  if (value === el.dataset.previousValue) {
+    return;
+  }
 
+  el.value = format(value, el.dataset.mask);
 
-  if (force || value && value !== previousValue && value.length > previousValue.length) {
-    el.value = format(value, mask);
-    if (isAndroid && isChrome) {
-      setTimeout(function () {
-        return trigger(el, 'input');
-      }, 0);
-    } else {
-      trigger(el, 'input');
-    }
+  if (event) {
+    event.target.value = el.value;
   }
 
   el.dataset.previousValue = value;
@@ -106,7 +91,11 @@ var directive = {
     var value = _ref.value;
 
     updateMask(el, value);
-    updateValue(el);
+    updateValue(el, value);
+
+    el.addEventListener('input', function (event) {
+      return updateValue(el, event.target.value, event);
+    });
   },
   componentUpdated: function componentUpdated(el, _ref2) {
     var value = _ref2.value,
@@ -117,8 +106,6 @@ var directive = {
     if (isMaskChanged) {
       updateMask(el, value);
     }
-
-    updateValue(el, isMaskChanged);
   }
 };
 
